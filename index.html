@@ -768,31 +768,15 @@ el.openWorkspace.addEventListener('click', async ()=>{
     const perm = await handle.requestPermission({ mode:'read' });
     if(perm!=='granted'){ alert('フォルダへのアクセスが許可されませんでした。'); return; }
     // 読み取りのみでライブラリに追加
-    library = [];
-    for await (const [name, h] of handle.entries()){
-      if(h.kind==='file' && name.toLowerCase().endsWith('.mp3')){
-        const file = await h.getFile();
-        const blob = new Blob([await file.arrayBuffer()], { type:'audio/mpeg' });
-        const meta = loadMeta();
-        const id = meta[name]?.id || crypto.randomUUID();
-        const track = {
-          id, name,
-          title: meta[name]?.title || name.replace(/\.mp3$/i,''),
-          artist: meta[name]?.artist || '',
-          album: meta[name]?.album || '',
-          year: meta[name]?.year || '',
-          size: file.size,
-          blob,
-          cover: meta[name]?.cover || null,
-          added: meta[name]?.added || Date.now()
-        };
-        library.push(track);
-        meta[name] = { id:track.id, title:track.title, artist:track.artist, album:track.album, year:track.year, added:track.added, cover:track.cover };
-        saveMeta(meta);
-      }
-    }
-    renderLibrary();
-    renderArtists();
+library = [];
+const meta = loadMeta();
+
+await readDirectoryRecursive(handle, library, meta);
+
+saveMeta(meta);
+renderLibrary();
+renderArtists();
+
   }catch(e){
     console.error(e);
     alert('フォルダを開けませんでした。HTTPS環境のChromium系ブラウザでお試しください。');
